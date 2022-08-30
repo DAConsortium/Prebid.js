@@ -74,10 +74,13 @@ export const spec = {
       }
 
       // DACID
-      const dacId = deepAccess(bidRequest, 'userId.dacId.id');
+      const fu = deepAccess(bidRequest, 'userId.fu');
+      const dacId = deepAccess(bidRequest, 'userId.dacId');
+      if (isStr(fu) && !isEmpty(fu)) {
+        payload.fuuid = fu;
+      }
       if (isStr(dacId) && !isEmpty(dacId)) {
         payload.dac_id = dacId;
-        payload.fuuid = dacId;
       }
 
       return {
