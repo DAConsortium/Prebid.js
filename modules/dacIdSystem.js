@@ -7,7 +7,8 @@
 
 import {
   logError,
-  logInfo
+  logInfo,
+  logWarn
 } from '../src/utils.js';
 import {
   ajax
@@ -23,8 +24,8 @@ export const storage = getStorageManager();
 
 export const FUUID_COOKIE_NAME = '_a1_f';
 export const AONEID_COOKIE_NAME = '_a1_d';
-export const apiUrl = 'https://staging.penta.a.one.impact-ad.jp/aud';
-const COOKIES_MAX_AGE = 60 * 60 * 24 * 1000; // 24h
+export const API_URL = 'https://penta.a.one.impact-ad.jp/aud';
+const COOKIES_EXPIRES = 60 * 60 * 24 * 1000; // 24h
 
 function getCookie() {
   return {
@@ -36,7 +37,7 @@ function getCookie() {
 function setAoneidToCookie(uid) {
   // set uid to Cookie.
   if (uid) {
-    const expires = new Date(Date.now() + COOKIES_MAX_AGE).toUTCString();
+    const expires = new Date(Date.now() + COOKIES_EXPIRES).toUTCString();
     storage.setCookie(
       AONEID_COOKIE_NAME,
       uid,
@@ -46,31 +47,8 @@ function setAoneidToCookie(uid) {
   }
 }
 
-function getApiCallback() {
-  return {
-    success: (response) => {
-      try {
-        const uid = JSON.parse(response)?.uid;
-        setAoneidToCookie(uid);
-      } catch (error) {
-        logError('User ID - dacId submodule: ' + error);
-      }
-    },
-    error: error => {
-      logError('User ID - dacId submodule was unable to get data from api: ' + error);
-    }
-  };
-}
-
-function callAoneApi(apiUrl) {
-  ajax(apiUrl, getApiCallback(), undefined, {
-    method: 'GET',
-    withCredentials: true
-  });
-}
-
 function getApiUrl(oid, fuuid) {
-  return `${apiUrl}?oid=${oid}&fu=${fuuid}`;
+  return `${API_URL}?oid=${oid}&fu=${fuuid}`;
 }
 
 export const dacIdSystemSubmodule = {
@@ -89,10 +67,7 @@ export const dacIdSystemSubmodule = {
     if (id && typeof id === 'object') {
       const fuuid = id.fuuid;
       const dacId = id.dacId;
-      return {
-        fu: fuuid,
-        dacId: dacId
-      }
+      return { fuuid: fuuid, dacId: dacId }
     }
   },
 
@@ -101,35 +76,68 @@ export const dacIdSystemSubmodule = {
    * @function
    * @returns { {id: {fuuid: string, dacId: string}} | undefined }
    */
+
   getId(config) {
     const configParams = (config && config.params) || {};
     if (!configParams || typeof configParams.oid !== 'string') {
       logInfo('User ID - a valid oid is not defined');
       return undefined;
     }
-
     const cookie = getCookie();
-    const fuuid = cookie.fuuid;
-    const uid = cookie.uid;
 
-    if (!fuuid) {
-      // if fuuid is not defined, return undefined.
-      logInfo('fuuid is not defined');
+    if (!cookie.fuuid) {
+      logWarn('There is no fuuid in cookie')
       return undefined;
     }
-
-    if (fuuid && !uid) {
-      // if fuuid is defined but uid is not defined,call API using the fuuid.
-      logInfo('uid is not defined');
-      const apiUrl = getApiUrl(configParams.oid, fuuid);
-      callAoneApi(apiUrl);
+    if (cookie.fuuid && cookie.uid) {
+      logWarn('There is fuuid and AoneId in cookie')
+      return {
+        id: {
+          fuuid: cookie.fuuid,
+          dacId: cookie.uid
+        }
+      };
     }
-    return {
-      id: {
-        fuuid: fuuid,
-        dacId: uid
-      }
+
+    let fuuid = 'fuuid';
+    let dacId = 'dacId';
+    const result = {
+      callback: (callback) => {
+        const ret = {fuuid, dacId};
+        const callbacks = {
+          success: response => {
+            let responseObj;
+            if (response) {
+              try {
+                responseObj = JSON.parse(response);
+                if (responseObj.uid === null) {
+                  logWarn('AoneId is null');
+                }
+                if (responseObj.error === 'unable to provide uid') {
+                  logWarn('There is no permission to use API');
+                }
+                ret.dacId = responseObj.uid;
+                ret.fuuid = cookie.fuuid;
+                setAoneidToCookie(ret.dacId);
+              } catch (error) {
+                logError('User ID - dacId submodule: ' + error);
+              }
+            }
+            callback(ret);
+          },
+          error: (error) => {
+            logError('User ID - dacId submodule was unable to get data from api: ' + error);
+            callback(ret);
+          }
+        };
+        const apiUrl = getApiUrl(configParams.oid, cookie.fuuid);
+        ajax(apiUrl, callbacks, undefined, {
+          method: 'GET',
+          withCredentials: true
+        });
+      },
     };
+    return result;
   }
 };
 
