@@ -74,7 +74,7 @@ function fetchAoneId(oid, fuuid) {
     callback: (callback) => {
       const ret = {
         fuuid,
-        dacId: undefined
+        uid: undefined
       };
       const callbacks = {
         success: (response) => {
@@ -120,14 +120,14 @@ export const dacIdSystemSubmodule = {
 
   /**
    * decode the stored id value for passing to bid requests
-   * @param { {fuuid: string, dacId: string} } id
-   * @returns { {dacId: {fuuid: string, dac_id: string} } | undefined }
+   * @param { {fuuid: string, uid: string} } id
+   * @returns { {dacId: {fuuid: string, dacId: string} } | undefined }
    */
   decode(id) {
     if (id && typeof id === 'object') {
       return {
         fuuid: id.fuuid,
-        dac_id: id.dacId
+        dacId: id.dacId
       }
     }
   },
@@ -135,7 +135,7 @@ export const dacIdSystemSubmodule = {
   /**
    * performs action to obtain id
    * @function
-   * @returns { {id: {fuuid: string, dacId: string}} | undefined }
+   * @returns { {id: {fuuid: string, uid: string}} | undefined }
    */
   getId(config) {
     const cookie = getCookieId();
