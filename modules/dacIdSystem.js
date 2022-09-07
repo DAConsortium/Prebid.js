@@ -83,9 +83,11 @@ function fetchAoneId(oid, fuuid) {
               const responseObj = JSON.parse(response);
               if (responseObj.error) {
                 logWarn(LOG_PREFIX + 'There is no permission to use API: ' + responseObj.error);
+                return callback(ret);
               }
               if (!responseObj.uid) {
                 logWarn(LOG_PREFIX + 'AoneId is null');
+                return callback(ret);
               }
               ret.dacId = responseObj.uid;
               setAoneidToCookie(ret.dacId);
@@ -155,7 +157,7 @@ export const dacIdSystemSubmodule = {
 
     const configParams = (config && config.params) || {};
     if (!configParams || typeof configParams.oid !== 'string') {
-      logInfo(LOG_PREFIX + 'oid is not defined');
+      logWarn(LOG_PREFIX + 'oid is not defined');
       return {
         id: {
           fuuid: cookie.fuuid,
