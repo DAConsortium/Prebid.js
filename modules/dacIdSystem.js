@@ -89,8 +89,8 @@ function fetchAoneId(oid, fuuid) {
                 logWarn(LOG_PREFIX + 'AoneId is null');
                 return callback(ret);
               }
-              ret.dacId = responseObj.uid;
-              setAoneidToCookie(ret.dacId);
+              ret.uid = responseObj.uid;
+              setAoneidToCookie(ret.uid);
             } catch (error) {
               logError(LOG_PREFIX + error);
             }
@@ -127,7 +127,7 @@ export const dacIdSystemSubmodule = {
     if (id && typeof id === 'object') {
       return {
         fuuid: id.fuuid,
-        dacId: id.dacId
+        dacId: id.uid
       }
     }
   },
@@ -150,7 +150,7 @@ export const dacIdSystemSubmodule = {
       return {
         id: {
           fuuid: cookie.fuuid,
-          dacId: cookie.uid
+          uid: cookie.uid
         }
       };
     }
@@ -161,7 +161,7 @@ export const dacIdSystemSubmodule = {
       return {
         id: {
           fuuid: cookie.fuuid,
-          dacId: undefined
+          uid: undefined
         }
       };
     }
